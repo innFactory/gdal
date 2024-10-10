@@ -10,23 +10,7 @@
 ###############################################################################
 # Copyright (c) 2008-2013, Even Rouault <even dot rouault at spatialys.com>
 #
-# Permission is hereby granted, free of charge, to any person obtaining a
-# copy of this software and associated documentation files (the "Software"),
-# to deal in the Software without restriction, including without limitation
-# the rights to use, copy, modify, merge, publish, distribute, sublicense,
-# and/or sell copies of the Software, and to permit persons to whom the
-# Software is furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included
-# in all copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-# OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
-# THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-# DEALINGS IN THE SOFTWARE.
+# SPDX-License-Identifier: MIT
 ###############################################################################
 
 import os
@@ -430,12 +414,13 @@ def test_gdalwarp_18(gdalwarp_path, tmp_path):
     dst_tif = str(tmp_path / "testgdalwarp18.tif")
 
     (_, ret_stderr) = gdaltest.runexternal_out_and_err(
-        f"{gdalwarp_path} -wm 20 -multi ../gcore/data/byte.tif {dst_tif}"
+        f"{gdalwarp_path} -wm 20MB -multi ../gcore/data/byte.tif {dst_tif}"
     )
 
     # This error will be returned if GDAL is not compiled with thread support
     if ret_stderr.find("CPLCreateThread() failed in ChunkAndWarpMulti()") != -1:
         pytest.skip("GDAL not compiled with thread support")
+    assert not ret_stderr
 
     ds = gdal.Open(dst_tif)
     assert ds is not None
@@ -1603,3 +1588,22 @@ def test_gdalwarp_if_option(gdalwarp_path, tmp_vsimem):
         f"{gdalwarp_path} -if HFA ../gcore/data/byte.tif {tmp_vsimem}/out.tif"
     )
     assert err is not None
+
+
+###############################################################################
+# Test invalid -wm
+
+
+def test_gdalwarp_invalid_wm(gdalwarp_path, tmp_vsimem):
+
+    ret, err = gdaltest.runexternal_out_and_err(
+        f"{gdalwarp_path} ../gcore/data/byte.tif {tmp_vsimem}/out.tif -wm maximum"
+    )
+    assert "non-numeric" in err
+    assert "Failed to parse value of -wm" in err
+
+    ret, err = gdaltest.runexternal_out_and_err(
+        f"{gdalwarp_path} ../gcore/data/byte.tif {tmp_vsimem}/out.tif -wm 200%"
+    )
+    assert "Memory percentage" in err
+    assert "Failed to parse value of -wm" in err

@@ -10,23 +10,7 @@
 // Copyright (c) 2017, Dmitry Baryshnikov <polimax@mail.ru>
 // Copyright (c) 2017, NextGIS <info@nextgis.com>
 /*
- * Permission is hereby granted, free of charge, to any person obtaining a
- * copy of this software and associated documentation files (the "Software"),
- * to deal in the Software without restriction, including without limitation
- * the rights to use, copy, modify, merge, publish, distribute, sublicense,
- * and/or sell copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included
- * in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
- * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
- * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
- * DEALINGS IN THE SOFTWARE.
+ * SPDX-License-Identifier: MIT
  ****************************************************************************/
 
 #ifndef GDAL_COMPILATION
@@ -1759,6 +1743,68 @@ TEST_F(test_cpl, CPLParseRFC822DateTime)
     ASSERT_TRUE(!CPLParseRFC822DateTime("15 Jan 2017 12:34:56 +9900", &year,
                                         &month, &day, &hour, &min, &sec, &tz,
                                         &weekday));
+}
+
+// Test CPLParseMemorySize()
+TEST_F(test_cpl, CPLParseMemorySize)
+{
+    GIntBig nValue;
+    bool bUnitSpecified;
+    CPLErr result;
+
+    result = CPLParseMemorySize("327mb", &nValue, &bUnitSpecified);
+    EXPECT_EQ(result, CE_None);
+    EXPECT_EQ(nValue, 327 * 1024 * 1024);
+    EXPECT_TRUE(bUnitSpecified);
+
+    result = CPLParseMemorySize("327MB", &nValue, &bUnitSpecified);
+    EXPECT_EQ(result, CE_None);
+    EXPECT_EQ(nValue, 327 * 1024 * 1024);
+    EXPECT_TRUE(bUnitSpecified);
+
+    result = CPLParseMemorySize("102.9K", &nValue, &bUnitSpecified);
+    EXPECT_EQ(result, CE_None);
+    EXPECT_EQ(nValue, static_cast<GIntBig>(102.9 * 1024));
+    EXPECT_TRUE(bUnitSpecified);
+
+    result = CPLParseMemorySize("102.9 kB", &nValue, &bUnitSpecified);
+    EXPECT_EQ(result, CE_None);
+    EXPECT_EQ(nValue, static_cast<GIntBig>(102.9 * 1024));
+    EXPECT_TRUE(bUnitSpecified);
+
+    result = CPLParseMemorySize("100%", &nValue, &bUnitSpecified);
+    EXPECT_EQ(result, CE_None);
+    EXPECT_GT(nValue, 100 * 1024 * 1024);
+    EXPECT_TRUE(bUnitSpecified);
+
+    result = CPLParseMemorySize("  802  ", &nValue, &bUnitSpecified);
+    EXPECT_EQ(result, CE_None);
+    EXPECT_EQ(nValue, 802);
+    EXPECT_FALSE(bUnitSpecified);
+
+    result = CPLParseMemorySize("110%", &nValue, &bUnitSpecified);
+    EXPECT_EQ(result, CE_Failure);
+
+    result = CPLParseMemorySize("8kbit", &nValue, &bUnitSpecified);
+    EXPECT_EQ(result, CE_Failure);
+
+    result = CPLParseMemorySize("8ZB", &nValue, &bUnitSpecified);
+    EXPECT_EQ(result, CE_Failure);
+
+    result = CPLParseMemorySize("8Z", &nValue, &bUnitSpecified);
+    EXPECT_EQ(result, CE_Failure);
+
+    result = CPLParseMemorySize("", &nValue, &bUnitSpecified);
+    EXPECT_EQ(result, CE_Failure);
+
+    result = CPLParseMemorySize("  ", &nValue, &bUnitSpecified);
+    EXPECT_EQ(result, CE_Failure);
+
+    result = CPLParseMemorySize("-100MB", &nValue, &bUnitSpecified);
+    EXPECT_EQ(result, CE_Failure);
+
+    result = CPLParseMemorySize("nan", &nValue, &bUnitSpecified);
+    EXPECT_EQ(result, CE_Failure);
 }
 
 // Test CPLCopyTree()
